@@ -28,6 +28,15 @@ package core.managers
 		static protected const TOKEN_SIZE:String = ",";
 		
 		/**
+		 * 已知尺寸类型
+		 */
+		static protected const TYPE_GET:String = "getImage";
+		/**
+		 * 请求类型
+		 */
+		static protected const TYPE_REQ:String = "reqImage";
+		
+		/**
 		 * 原尺寸BitmapData
 		 */
 		protected var cacheOriginal:Dictionary;
@@ -40,9 +49,9 @@ package core.managers
 		 */
 		protected var urls:Dictionary;
 		/**
-		 * 同样地址的图片，不用尺寸的请求队列
+		 * 图片请求队列
 		 */
-		protected var queueSize:Dictionary;
+		protected var queueReqs:Dictionary;
 		
 		public function ImageManager() 
 		{
@@ -50,10 +59,15 @@ package core.managers
 				cacheOriginal = new Dictionary();
 				cacheDiffSize = new Dictionary();
 				urls = new Dictionary();
-				queueSize = new Dictionary();
+				queueReqs = new Dictionary();
 			}
 		}
 		
+		/**
+		 * 获取图片管理器单例
+		 * @return 
+		 * 
+		 */
 		static public function getInstance():ImageManager {
 			if (instance == null) {
 				instance = new ImageManager();
@@ -83,7 +97,7 @@ package core.managers
 				bmpData = cacheOriginal[url] as BitmapData;
 				bmpData.lock();
 				var cloneData:BitmapData;
-				if (bmpData.width == width && bmpData.height == height) {
+				if (bmpData.width == width && bmpData.height == height) { // 若尺寸和原图一致则使用原图数据
 					cloneData = bmpData;
 				} else {
 					cloneData = new BitmapData(width, height, true, 0);
@@ -102,56 +116,29 @@ package core.managers
 			cacheDiffSize[keySize] = bmpData; // 放入缓存
 			bmp = new Bitmap(bmpData);
 			bmp.smoothing = smoothing;
+			var loader:Loader;
 			var size:Object = {
 				width: width,
 				height: height
 			}
-			if (queueSize.hasOwnProperty(url)) {
-				queueSize[url].push(size);
-				return bmp;
-			} else {
-				queueSize[url] = new Vector.<Object>();
-				queueSize[url].push(size);
+			if (! queueReqs.hasOwnProperty(url)) {
+				queueReqs[url] = new Dictionary();
+				loader = new Loader();
+				loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onLoadComplete);
+				loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, onIOError);
+				urls[loader] = url;
 			}
-			var loader:Loader = new Loader();
-			loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onLoadComplete);
-			loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, onIOError);
-			urls[loader] = url;
-			loader.load(new URLRequest(url));
-			return bmp;
-		}
-		
-		protected function onLoadComplete(e:Event):void {
-			var loader:Loader = (e.currentTarget as LoaderInfo).loader;
-			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, onLoadComplete);
-			loader.contentLoaderInfo.removeEventListener(IOErrorEvent.IO_ERROR, onIOError);
-			var bmpOriginalData:BitmapData = (loader.content as Bitmap).bitmapData;
-			var url:String = urls[loader];
-			for each (var size:Object in queueSize[url]) {
-				var keySize:String = url + TOKEN_URL + size.width + TOKEN_SIZE + size.height;
-				var bmpDiffSizeData:BitmapData = cacheDiffSize[keySize]; // 当前这个BitmapData必然是没有图像的
-				var matx:Matrix = new Matrix();
-				matx.scale(size.width / bmpOriginalData.width, size.height / bmpOriginalData.height);
-				bmpDiffSizeData.lock();
-				bmpDiffSizeData.draw(bmpOriginalData, matx, null, null, null, true);
-				bmpDiffSizeData.unlock();
-				if (! cacheOriginal.hasOwnProperty(url)) { // 若没有缓存原图
-					if (size.width == bmpOriginalData.width
-						&& size.height == bmpOriginalData.height)
-					{ // 若请求的尺寸和原图一样
-						cacheOriginal[url] = cacheDiffSize[keySize]; // 指向cacheDiffSize的数据
-						bmpOriginalData.dispose();
-					} else {
-						cacheOriginal[url] = bmpOriginalData; // 缓存原尺寸图片
-					}
+			if (queueReqs[url].hasOwnProperty(TYPE_GET)) {
+				queueReqs[url][TYPE_GET].push(size);
+			} else {
+				queueReqs[url][TYPE_GET] = new Vector.<Object>();
+				queueReqs[url][TYPE_GET].push(size);
+				if (loader) {
+					loader.load(new URLRequest(url));
 				}
 			}
-			delete queueSize[url];
-			delete urls[loader];
-			loader.unload();
+			return bmp;
 		}
-		
-		protected var queueReqs:Dictionary = new Dictionary();
 		
 		/**
 		 * 未知图片大小时请求图片
@@ -164,46 +151,81 @@ package core.managers
 			if (cacheOriginal.hasOwnProperty(url)) {
 				callback(cacheOriginal[url], parms);
 			} else {
+				var loader:Loader;
 				var req:Object = {
 					callback: callback,
 					parms: parms
 				};
-				if (queueReqs.hasOwnProperty(url)) {
-					queueReqs[url].push(req);
-				} else {
-					queueReqs[url] = new Vector.<Object>;
-					queueReqs[url].push(req);
-					var loader:Loader = new Loader();
-					loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onReqLoadComplete);
+				if (! queueReqs.hasOwnProperty(url)) { // 若没有相同地址的请求
+					queueReqs[url] = new Dictionary();
+					loader = new Loader();
+					loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onLoadComplete);
 					loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, onIOError);
-					loader.load(new URLRequest(url));
 					urls[loader] = url;
+				}
+				if (queueReqs[url].hasOwnProperty(TYPE_REQ)) { // 若已经有同类型的求
+					queueReqs[url][TYPE_REQ].push(req); // 加入队列
+				} else {
+					queueReqs[url][TYPE_REQ] = new Vector.<Object>(); // 建立队列
+					queueReqs[url][TYPE_REQ].push(req);
+					if (loader) {
+						loader.load(new URLRequest(url));
+					}
 				}
 			}
 		}
 		
-		protected function onReqLoadComplete(e:Event):void {
+		protected function onLoadComplete(e:Event):void {
 			var loader:Loader = (e.currentTarget as LoaderInfo).loader;
-			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, onReqLoadComplete);
+			
+			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, onLoadComplete);
 			loader.contentLoaderInfo.removeEventListener(IOErrorEvent.IO_ERROR, onIOError);
+			
 			var bmpOriginalData:BitmapData = (loader.content as Bitmap).bitmapData;
 			var url:String = urls[loader];
-			if (cacheOriginal.hasOwnProperty(url)) { // 原图只需要一个
-				bmpOriginalData.dispose();
-			} else {
-				cacheOriginal[url] = bmpOriginalData;
+			
+			if (queueReqs[url].hasOwnProperty(TYPE_GET)) {
+				for each (var size:Object in queueReqs[url][TYPE_GET]) {
+					var keySize:String = url + TOKEN_URL + size.width + TOKEN_SIZE + size.height;
+					var bmpDiffSizeData:BitmapData = cacheDiffSize[keySize]; // 当前这个BitmapData必然是没有图像的
+					var matx:Matrix = new Matrix();
+					matx.scale(size.width / bmpOriginalData.width, size.height / bmpOriginalData.height);
+					bmpDiffSizeData.lock();
+					bmpDiffSizeData.draw(bmpOriginalData, matx, null, null, null, true);
+					bmpDiffSizeData.unlock();
+					if (! cacheOriginal.hasOwnProperty(url)) { // 若没有缓存原图
+						if (size.width == bmpOriginalData.width
+							&& size.height == bmpOriginalData.height)
+						{ // 若请求的尺寸和原图一样
+							cacheOriginal[url] = cacheDiffSize[keySize]; // 指向cacheDiffSize的数据
+							bmpOriginalData.dispose();
+						} else {
+							cacheOriginal[url] = bmpOriginalData; // 缓存原尺寸图片
+						}
+					}
+				}
+				delete queueReqs[url][TYPE_GET];
 			}
-			for each (var req:Object in queueReqs[url]) {
-				req.callback(cacheOriginal[url], req.parms);
+			if (queueReqs[url].hasOwnProperty(TYPE_REQ)) {
+				if (cacheOriginal.hasOwnProperty(url) && cacheOriginal[url] != bmpOriginalData) { // 原图只需要一个
+					bmpOriginalData.dispose();
+				} else {
+					cacheOriginal[url] = bmpOriginalData;
+				}
+				for each (var req:Object in queueReqs[url][TYPE_REQ]) {
+					req.callback(cacheOriginal[url], req.parms); // 回调
+				}
+				delete queueReqs[url][TYPE_REQ];
 			}
+			
 			delete queueReqs[url];
+			delete urls[loader];
 			loader.unload();
 		}
 		
 		protected function onIOError(e:IOErrorEvent):void {
 			var loader:Loader = (e.currentTarget as LoaderInfo).loader;
 			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, onLoadComplete);
-			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, onReqLoadComplete);
 			loader.contentLoaderInfo.removeEventListener(IOErrorEvent.IO_ERROR, onIOError);
 			trace("[ERROR] image not found: " + urls[loader]);
 			delete urls[loader];
