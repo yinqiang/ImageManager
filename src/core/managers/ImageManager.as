@@ -104,8 +104,8 @@ package core.managers
 					var matx:Matrix = new Matrix();
 					matx.scale(width / bmpData.width, height / bmpData.height);
 					cloneData.draw(bmpData, matx);
-					bmpData.unlock();
 				}
+				bmpData.unlock();
 				cacheDiffSize[keySize] = cloneData;
 				bmp = new Bitmap(bmpData);
 				bmp.smoothing = smoothing;
