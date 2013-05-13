@@ -53,6 +53,9 @@ package core.managers
 		 */
 		protected var queueReqs:Dictionary;
 		
+		protected var imageMemoryList:Array;
+		protected var imageMemory:Number;
+		
 		public function ImageManager() 
 		{
 			if (instance == null) {
@@ -60,6 +63,8 @@ package core.managers
 				cacheDiffSize = new Dictionary();
 				urls = new Dictionary();
 				queueReqs = new Dictionary();
+				imageMemoryList = [];
+				imageMemory = 0;
 			}
 		}
 		
@@ -218,6 +223,9 @@ package core.managers
 				delete queueReqs[url][TYPE_REQ];
 			}
 			
+			imageMemoryList.push({ url: url, bytes: loader.loaderInfo.bytesLoaded });
+			imageMemory += loader.loaderInfo.bytesLoaded;
+			
 			delete queueReqs[url];
 			delete urls[loader];
 			loader.unload();
@@ -229,6 +237,15 @@ package core.managers
 			loader.contentLoaderInfo.removeEventListener(IOErrorEvent.IO_ERROR, onIOError);
 			trace("[ERROR] image not found: " + urls[loader]);
 			delete urls[loader];
+		}
+		
+		public function getImageMem():Number {
+			return imageMemory;
+		}
+		
+		public function getImageMemList():Array {
+			imageMemoryList.sortOn('bytes', Array.NUMERIC | Array.DESCENDING);
+			return imageMemoryList;
 		}
 	}
 }
