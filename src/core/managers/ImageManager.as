@@ -53,7 +53,13 @@ package core.managers
 		 */
 		protected var queueReqs:Dictionary;
 		
+		/**
+		 * 各个url占用的内存数量
+		 */
 		protected var imageMemoryList:Array;
+		/**
+		 * 内存总占用量
+		 */
 		protected var imageMemory:Number;
 		
 		public function ImageManager() 
@@ -239,10 +245,20 @@ package core.managers
 			delete urls[loader];
 		}
 		
-		public function getImageMem():Number {
+		/**
+		 * 获得图片的内存总占用量
+		 * @return 
+		 * 
+		 */
+		public function getImageMemTotal():Number {
 			return imageMemory;
 		}
 		
+		/**
+		 * 获得各个url占用的内存量
+		 * @return 
+		 * 
+		 */
 		public function getImageMemList():Array {
 			imageMemoryList.sortOn('bytes', Array.NUMERIC | Array.DESCENDING);
 			return imageMemoryList;
