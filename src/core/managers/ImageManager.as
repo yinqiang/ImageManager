@@ -6,6 +6,7 @@ package core.managers
 	import flash.display.LoaderInfo;
 	import flash.events.Event;
 	import flash.events.IOErrorEvent;
+	import flash.events.SecurityErrorEvent;
 	import flash.geom.Matrix;
 	import flash.net.URLRequest;
 	import flash.utils.Dictionary;
@@ -137,6 +138,7 @@ package core.managers
 				loader = new Loader();
 				loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onLoadComplete);
 				loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, onIOError);
+				loader.contentLoaderInfo.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError);
 				urls[loader] = url;
 			}
 			if (queueReqs[url].hasOwnProperty(TYPE_GET)) {
@@ -191,6 +193,7 @@ package core.managers
 			
 			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, onLoadComplete);
 			loader.contentLoaderInfo.removeEventListener(IOErrorEvent.IO_ERROR, onIOError);
+			loader.contentLoaderInfo.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError);
 			
 			var bmpOriginalData:BitmapData = (loader.content as Bitmap).bitmapData;
 			var url:String = urls[loader];
@@ -241,7 +244,17 @@ package core.managers
 			var loader:Loader = (e.currentTarget as LoaderInfo).loader;
 			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, onLoadComplete);
 			loader.contentLoaderInfo.removeEventListener(IOErrorEvent.IO_ERROR, onIOError);
+			loader.contentLoaderInfo.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError);
 			trace("[ERROR] image not found: " + urls[loader]);
+			delete urls[loader];
+		}
+		
+		protected function onSecurityError(e:SecurityErrorEvent):void {
+			var loader:Loader = (e.currentTarget as LoaderInfo).loader;
+			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, onLoadComplete);
+			loader.contentLoaderInfo.removeEventListener(IOErrorEvent.IO_ERROR, onIOError);
+			loader.contentLoaderInfo.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError);
+			trace("[SECURITY ERROR] image can not open: " + urls[loader]);
 			delete urls[loader];
 		}
 		
