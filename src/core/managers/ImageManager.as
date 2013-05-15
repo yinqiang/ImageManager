@@ -174,6 +174,7 @@ package core.managers
 					loader = new Loader();
 					loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onLoadComplete);
 					loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, onIOError);
+					loader.contentLoaderInfo.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError);
 					urls[loader] = url;
 				}
 				if (queueReqs[url].hasOwnProperty(TYPE_REQ)) { // 若已经有同类型的求
