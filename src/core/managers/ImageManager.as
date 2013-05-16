@@ -233,8 +233,8 @@ package core.managers
 				delete queueReqs[url][TYPE_REQ];
 			}
 			
-			imageMemoryList.push({ url: url, bytes: loader.loaderInfo.bytesLoaded });
-			imageMemory += loader.loaderInfo.bytesLoaded;
+			imageMemoryList.push({ url: url, bytes: loader.contentLoaderInfo.bytesLoaded });
+			imageMemory += loader.contentLoaderInfo.bytesLoaded;
 			
 			delete queueReqs[url];
 			delete urls[loader];
