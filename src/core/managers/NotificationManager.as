@@ -77,9 +77,21 @@ package core.managers
 		public function dump(filter:String=null):String {
 			const type_filter:Array = (filter ? filter.split(FILTER_TOKEN) : null);
 			var ret:String = "";
-			for (var type_:String in types) {
-				var group:NotificationGroup = types[type_];
-				ret += "type:" + type_ + ", count:" + group.count() + "\n";
+			var group:NotificationGroup;
+			if (type_filter) {
+				for (var i:int=0; i<type_filter.length; i++) {
+					group = types[type_filter[i]];
+					if (group) {
+						ret += "type:" + type_ + ", count:" + group.count() + "\n";
+					} else {
+						ret += "type:" + type_ + " NULL\n";
+					}
+				}
+			} else {
+				for (var type_:String in types) {
+					group = types[type_];
+					ret += "type:" + type_ + ", count:" + group.count() + "\n";
+				}
 			}
 			return ret;
 		}
