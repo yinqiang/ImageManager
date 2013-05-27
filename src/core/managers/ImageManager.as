@@ -22,7 +22,7 @@ package core.managers
 		/**
 		 * url和尺寸之间的分隔符
 		 */
-		static protected const TOKEN_URL:String = "^";
+		static protected const TOKEN_URL:String = "\0";
 		/**
 		 * width和height之间的分隔符
 		 */
