@@ -11,7 +11,7 @@ package core.managers
 	{
 		static protected var instance:NotificationManager;
 		
-		static public const FILTER_TOKEN:String = ";"
+		static private const FILTER_TOKEN:String = ";"
 		
 		private var types:Array;
 		
