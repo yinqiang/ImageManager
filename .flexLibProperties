@@ -2,7 +2,6 @@
 <flexLibProperties includeAllClasses="true" useMultiPlatformConfig="false" version="3">
   <includeClasses>
     <classEntry path="core.managers.NotificationManager"/>
-    <classEntry path="core.managers.NotificationGroup"/>
     <classEntry path="core.Consts"/>
   </includeClasses>
   <includeResources/>
